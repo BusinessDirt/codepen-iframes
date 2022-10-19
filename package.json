@@ -1,7 +1,7 @@
 {
-	"name": "obsidian-sample-plugin",
+	"name": "codepen-iframes",
 	"version": "1.0.0",
-	"description": "This is a sample plugin for Obsidian (https://obsidian.md)",
+	"description": "This plugin allows iframes to render only the result of a codepen",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",

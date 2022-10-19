@@ -1,8 +1,18 @@
-/*
+.block-language-codepen-iframe .solarsystem {
+    width: 1280px;
+    height: 720px;
+    border: 0px;
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
+    zoom: 0.75;
+    -webkit-transform: scale(0.75);
+    -webkit-transform-origin: 0 0;
+}
 
-If your plugin does not need CSS, delete this file.
+.block-language-codepen-iframe {
+    width: 100%;
+    aspect-ratio: 16/9;
+    padding: 0;
+    overflow: hidden;
 
-*/
+    border-radius: 15px;
+}
