@@ -1,78 +1,65 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { request } from 'http';
+import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, renderResults, requestUrl, Setting } from 'obsidian';
 
 // Remember to rename these classes and interfaces!
 
-interface MyPluginSettings {
-	mySetting: string;
+interface PluginSettings {
+	enabled: boolean;
 }
 
-const DEFAULT_SETTINGS: MyPluginSettings = {
-	mySetting: 'default'
+const DEFAULT_SETTINGS: PluginSettings = {
+	enabled: false
 }
 
 export default class MyPlugin extends Plugin {
-	settings: MyPluginSettings;
+	settings: PluginSettings;
 
 	async onload() {
 		await this.loadSettings();
 
-		// This creates an icon in the left ribbon.
-		const ribbonIconEl = this.addRibbonIcon('dice', 'Sample Plugin', (evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
-		});
-		// Perform additional things with the ribbon
-		ribbonIconEl.addClass('my-plugin-ribbon-class');
+		this.registerMarkdownCodeBlockProcessor("codepen-iframe", async (source, el, ctx) => {
+			const rows = source.split("\n").filter((row) => row.length > 0);
 
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status Bar Text');
+			const linkIndex = rows.findIndex(s => s.startsWith("link: "));
+			const link = linkIndex === null ? "" : rows[linkIndex].replace("link: ", "");
 
-		// This adds a simple command that can be triggered anywhere
-		this.addCommand({
-			id: 'open-sample-modal-simple',
-			name: 'Open sample modal (simple)',
-			callback: () => {
-				new SampleModal(this.app).open();
+			const widthIndex = rows.findIndex(s => s.startsWith("width: "));
+			const width = widthIndex === null ? "" : rows[widthIndex].replace("width: ", "");
+
+			const heightIndex = rows.findIndex(s => s.startsWith("height: "));
+			const height = heightIndex === null ? "" : rows[heightIndex].replace("height: ", "");
+
+			const classIndex = rows.findIndex(s => s.startsWith("class: "));
+			const clazz = classIndex === null ? "" : rows[classIndex].replace("class: ", "");
+
+			const headers = {
+				"Authorization": "bearer somewhat"
 			}
-		});
-		// This adds an editor command that can perform some operation on the current editor instance
-		this.addCommand({
-			id: 'sample-editor-command',
-			name: 'Sample editor command',
-			editorCallback: (editor: Editor, view: MarkdownView) => {
-				console.log(editor.getSelection());
-				editor.replaceSelection('Sample Editor Command');
-			}
-		});
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
-		this.addCommand({
-			id: 'open-sample-modal-complex',
-			name: 'Open sample modal (complex)',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new SampleModal(this.app).open();
-					}
 
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
-				}
+			if (link != "") {
+				// get the content from the pen
+				var content = ""
+				await requestUrl({ url: link, headers: headers })
+					.then(res => content = res.text)
+					.catch(err => console.error(err));
+
+				// create a div to take the iframe from
+				const div = createDiv();
+				div.innerHTML = content;
+
+				// the iframe set to its width and height
+				var result: HTMLElement = div.find('#result');
+				result.style.width = width;
+				result.style.height = height;
+				result.classList.add(clazz);
+
+				// set the iframe as to the inner html of the codeblock
+				el.innerHTML = result.outerHTML;
 			}
 		});
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
-
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			console.log('click', evt);
-		});
+		this.addSettingTab(new MainSettingsTab(this.app, this));
 
 		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
 		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
@@ -91,23 +78,7 @@ export default class MyPlugin extends Plugin {
 	}
 }
 
-class SampleModal extends Modal {
-	constructor(app: App) {
-		super(app);
-	}
-
-	onOpen() {
-		const {contentEl} = this;
-		contentEl.setText('Woah!');
-	}
-
-	onClose() {
-		const {contentEl} = this;
-		contentEl.empty();
-	}
-}
-
-class SampleSettingTab extends PluginSettingTab {
+class MainSettingsTab extends PluginSettingTab {
 	plugin: MyPlugin;
 
 	constructor(app: App, plugin: MyPlugin) {
@@ -123,15 +94,15 @@ class SampleSettingTab extends PluginSettingTab {
 		containerEl.createEl('h2', {text: 'Settings for my awesome plugin.'});
 
 		new Setting(containerEl)
-			.setName('Setting #1')
-			.setDesc('It\'s a secret')
-			.addText(text => text
-				.setPlaceholder('Enter your secret')
-				.setValue(this.plugin.settings.mySetting)
+			.setName('Enable Plugin')
+			.setDesc('Enables / Disables the Plugin')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.enabled)
 				.onChange(async (value) => {
-					console.log('Secret: ' + value);
-					this.plugin.settings.mySetting = value;
+					console.log("Codepen Iframes " + true);
+					this.plugin.settings.enabled = value;
 					await this.plugin.saveSettings();
-				}));
+				})
+			);
 	}
 }
